@@ -204,3 +204,5 @@ cython_debug/
 #src
 datasets/
 log/
+tier_datasets/
+xbd/
