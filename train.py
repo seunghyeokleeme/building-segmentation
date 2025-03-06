@@ -263,7 +263,7 @@ def train_loop(dataloader, model, fn_loss, optim, epoch):
         writer_train.add_images("predict", img_tensor=pred, global_step=(num_batches*(epoch -1)+batch))
     
     train_loss /= num_batches
-    train_accuarcy = correct / size
+    train_accuarcy = correct / num_batches
     writer_train.add_scalar('Loss', train_loss, epoch)
     writer_train.add_scalar('Accuray', train_accuarcy, epoch)
 
