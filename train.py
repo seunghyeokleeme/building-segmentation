@@ -179,8 +179,8 @@ class xbdDataset(VisionDataset):
         super(xbdDataset, self).__init__(root, transforms, transform, target_transform)
         self.images_dir = os.path.join(root, "images")
         self.masks_dir = os.path.join(root, "targets")
-        self.image_filenames = sorted([f for f in os.listdir(self.images_dir) if f.endswith('pre_disaster.png')])
-        self.mask_filenames = sorted([f for f in os.listdir(self.masks_dir) if f.endswith('pre_disaster_target.png')])
+        self.image_filenames = sorted(os.listdir(self.images_dir))
+        self.mask_filenames = sorted(os.listdir(self.masks_dir))
         assert len(self.image_filenames) == len(self.mask_filenames)
 
     def __len__(self):
@@ -266,7 +266,6 @@ def train_loop(dataloader, model, fn_loss, optim, epoch):
     train_accuarcy = correct / size
     writer_train.add_scalar('Loss', train_loss, epoch)
     writer_train.add_scalar('Accuray', train_accuarcy, epoch)
-
 
 
 train_loop(dataloader=train_loader, model=net, fn_loss=fn_loss, optim=optim, epoch=num_epoch)
