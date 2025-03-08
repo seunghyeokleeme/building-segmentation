@@ -9,13 +9,14 @@ from torch.utils.tensorboard import SummaryWriter
 
 #parameters
 lr = 1e-3
-batch_size = 20
+batch_size = 2
 num_epoch = 100
 
 data_dir = './datasets'
 log_dir = './log'
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+
 print(f"Using {device} device")
 
 writer_train = SummaryWriter(log_dir=os.path.join(log_dir, 'exp1/train'), comment='train')
@@ -227,14 +228,13 @@ fn_acc = lambda pred, label: (pred == label).float().mean()
 # Optimizer 설정하기
 optim = torch.optim.Adam(net.parameters(), lr=lr)
 
-def train_loop(dataloader, model, fn_loss, optim, epoch):
-    size = len(dataloader.dataset)
+def train_loop(dataloader, model, fn_loss, optim, epoch, writer):
     num_batches = len(dataloader)
     train_loss, correct = 0.0, 0
 
     model.train()
 
-    for batch, (input, mask) in enumerate(dataloader):
+    for batch, (input, mask) in enumerate(dataloader, 1):
         input = input.to(device)
         mask = mask.to(device)
         
@@ -253,20 +253,24 @@ def train_loop(dataloader, model, fn_loss, optim, epoch):
         correct += acc.item()
 
         print("TRAIN: EPOCH %04d | BATCH %04d / %04d | LOSS %.4f | ACC %.4f"%
-                (epoch, batch, num_batches, loss.item(), acc.item() / batch_size))
+                (epoch, batch, num_batches, loss.item(), acc.item()))
 
         input_img = fn_denorm(input, mean=[0.3096, 0.3428, 0.2564], std=[0.1309, 0.1144, 0.1081])
 
         # Tensorboard 저장하기
-        writer_train.add_images("input", img_tensor=input_img, global_step=(num_batches*(epoch -1)+batch))
-        writer_train.add_images("mask", img_tensor=mask, global_step=(num_batches*(epoch -1)+batch))
-        writer_train.add_images("predict", img_tensor=pred, global_step=(num_batches*(epoch -1)+batch))
+        writer.add_images("input", img_tensor=input_img, global_step=(num_batches*(epoch -1)+batch))
+        writer.add_images("mask", img_tensor=mask, global_step=(num_batches*(epoch -1)+batch))
+        writer.add_images("predict", img_tensor=pred, global_step=(num_batches*(epoch -1)+batch))
     
     train_loss /= num_batches
-    train_accuarcy = correct / num_batches
-    writer_train.add_scalar('Loss', train_loss, epoch)
-    writer_train.add_scalar('Accuray', train_accuarcy, epoch)
+    train_accuracy = correct / num_batches
+    writer.add_scalar('Loss', train_loss, epoch)
+    writer.add_scalar('Accuracy', train_accuracy, epoch)
+    
+    return train_loss, train_accuracy
 
+for epoch in range(1, num_epoch+1):
+    acc, loss = train_loop(dataloader=train_loader, model=net, fn_loss=fn_loss, optim=optim, epoch=epoch, writer=writer_train)
+    pass
 
-train_loop(dataloader=train_loader, model=net, fn_loss=fn_loss, optim=optim, epoch=num_epoch)
 writer_train.close()
