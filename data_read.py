@@ -26,7 +26,7 @@ lst_hold_targets = [f for f in os.listdir(os.path.join(save_data, 'hold', 'targe
 lst_test_images = [f for f in os.listdir(os.path.join(save_data, 'test', 'images')) if f.endswith('pre_disaster.png')]
 lst_test_targets = [f for f in os.listdir(os.path.join(save_data, 'test', 'targets')) if f.endswith('pre_disaster_target.png')]
 lst_tier_images = [f for f in os.listdir(os.path.join(save_data, 'tier3', 'images')) if f.endswith('pre_disaster.png')]
-lst_tier_targets = [f for f in os.listdir(os.path.join(save_data, 'tier3', 'targets')) if f.endswith('pre_disaster_target.png')]
+lst_tier_labels = [f for f in os.listdir(os.path.join(save_data, 'tier3', 'labels')) if f.endswith('pre_disaster.json')]
 
 lst_train_images.sort()
 lst_train_targets.sort()
@@ -35,7 +35,7 @@ lst_hold_targets.sort()
 lst_test_images.sort()
 lst_test_targets.sort()
 lst_tier_images.sort()
-lst_tier_targets.sort()
+lst_tier_labels.sort()
 
 print(f"Number of training images: {len(lst_train_images)}")
 print(f"Number of training targets: {len(lst_train_targets)}")
@@ -44,7 +44,7 @@ print(f"Number of hold targets: {len(lst_hold_targets)}")
 print(f"Number of test images: {len(lst_test_images)}")
 print(f"Number of test targets: {len(lst_test_targets)}")
 print(f"Number of tier images: {len(lst_tier_images)}")
-print(f"Number of tier targets: {len(lst_tier_targets)}")
+print(f"Number of tier labels: {len(lst_tier_labels)}")
 
 print(lst_train_images[0])
 print(lst_train_targets[0])
@@ -53,4 +53,4 @@ print(lst_hold_targets[0])
 print(lst_test_images[0])
 print(lst_test_targets[0])
 print(lst_tier_images[0])
-print(lst_tier_targets[0])
+print(lst_tier_labels[0])

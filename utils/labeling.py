@@ -48,7 +48,7 @@ def save_mask(dir_label, save_dir):
                 for x, y in coords:
                     # x 좌표 선형 변환
                     px = (x - min_x) / (max_x - min_x) * (img_size - 1)
-                    # y 좌표 단순 선형 변환 (반전 없음)
+                    # y 좌표 단순 선형 변환
                     py = (y - min_y) / (max_y - min_y) * (img_size - 1)
                     transformed.append((px, py))
                 return transformed
