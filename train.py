@@ -14,13 +14,14 @@ num_epoch = 100
 
 data_dir = './datasets'
 log_dir = './log'
+ckpt_dir = './checkpoint'
 
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 
 print(f"Using {device} device")
 
 writer_train = SummaryWriter(log_dir=os.path.join(log_dir, 'exp1/train'), comment='train')
-# writer_val = SummaryWriter(log_dir=os.path.join(log_dir, 'exp1/val'), comment='val')
+writer_val = SummaryWriter(log_dir=os.path.join(log_dir, 'exp1/val'), comment='val')
 
 class UNet(nn.Module):
     def __init__(self):
@@ -61,40 +62,6 @@ class UNet(nn.Module):
 
         self.enc5_1 = CBR2d(in_channels=512, out_channels=1024)
         
-        # Expansive path
-        self.dec5_1 = CBR2d(in_channels=1024, out_channels=512)
-
-        self.unpool4 = nn.ConvTranspose2d(in_channels=512, out_channels=512,
-                                          kernel_size=2, stride=2, padding=0, bias=True)
-        
-        self.dec4_2 = CBR2d(in_channels=2 * 512, out_channels=512)
-        
-        self.dec4_1 = CBR2d(in_channels=512, out_channels=256)
-
-        self.unpool3 = nn.ConvTranspose2d(in_channels=256, out_channels=256,
-                                          kernel_size=2, stride=2, padding=0, bias=True)
-        
-        self.dec3_2 = CBR2d(in_channels=2 * 256, out_channels=256)
-
-        self.dec3_1 = CBR2d(in_channels=256, out_channels=128)
-
-        self.unpool2 = nn.ConvTranspose2d(in_channels=128, out_channels=128,
-                                          kernel_size=2, stride=2, padding=0, bias=True)
-        
-        self.dec2_2 = CBR2d(in_channels=2 * 128, out_channels=128)
-
-        self.dec2_1 = CBR2d(in_channels=128, out_channels=64)
-
-        self.unpool1 = nn.ConvTranspose2d(in_channels=64, out_channels=64, 
-                                          kernel_size=2, stride=2, padding=0, bias=True)
-        
-        self.dec1_2 = CBR2d(in_channels=2 * 64, out_channels=64)
-
-        self.dec1_1 = CBR2d(in_channels=64, out_channels=64)
-
-        self.fc = nn.Conv2d(in_channels=64, out_channels=1,
-                            kernel_size=1, stride=1, padding=0, bias=True)
-
         # Expansive path
         self.dec5_1 = CBR2d(in_channels=1024, out_channels=512)
 
@@ -228,6 +195,16 @@ fn_acc = lambda pred, label: (pred == label).float().mean()
 # Optimizer 설정하기
 optim = torch.optim.Adam(net.parameters(), lr=lr)
 
+## 네트워크 저장하기
+def save(ckpt_dir, net, optim, epoch):
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir)
+
+    torch.save({'net': net.state_dict(), 'optim': optim.state_dict()},
+               "%s/model_epoch%d.pth" % (ckpt_dir, epoch))
+
+
+
 def train_loop(dataloader, model, fn_loss, optim, epoch, writer):
     num_batches = len(dataloader)
     train_loss, correct = 0.0, 0
@@ -269,8 +246,50 @@ def train_loop(dataloader, model, fn_loss, optim, epoch, writer):
     
     return train_loss, train_accuracy
 
+def eval_loop(dataloader, model, fn_loss, epoch, writer):
+    num_batches = len(dataloader)
+    eval_loss, correct = 0.0, 0
+
+    model.eval()
+
+    with torch.no_grad():
+        for batch, (input, mask) in enumerate(dataloader, 1):
+            input = input.to(device)
+            mask = mask.to(device)
+            
+            logits = model(input)
+            loss = fn_loss(logits, mask)
+
+            eval_loss += loss.item()
+            
+            pred = fn_pred(logits)
+            acc = fn_acc(pred, mask)
+            correct += acc.item()
+
+            print("VALID: EPOCH %04d | BATCH %04d / %04d | LOSS %.4f | ACC %.4f"%
+                    (epoch, batch, num_batches, loss.item(), acc.item()))
+
+            input_img = fn_denorm(input, mean=[0.3096, 0.3428, 0.2564], std=[0.1309, 0.1144, 0.1081])
+
+            # Tensorboard 저장하기
+            writer.add_images("input", img_tensor=input_img, global_step=(num_batches*(epoch -1)+batch))
+            writer.add_images("mask", img_tensor=mask, global_step=(num_batches*(epoch -1)+batch))
+            writer.add_images("predict", img_tensor=pred, global_step=(num_batches*(epoch -1)+batch))
+        
+    eval_loss /= num_batches
+    eval_accuracy = correct / num_batches
+    writer.add_scalar('Loss', eval_loss, epoch)
+    writer.add_scalar('Accuracy', eval_accuracy, epoch)
+    
+    return eval_loss, eval_accuracy
+
 for epoch in range(1, num_epoch+1):
-    acc, loss = train_loop(dataloader=train_loader, model=net, fn_loss=fn_loss, optim=optim, epoch=epoch, writer=writer_train)
-    pass
+    loss, acc = train_loop(dataloader=train_loader, model=net, fn_loss=fn_loss, optim=optim, epoch=epoch, writer=writer_train)
+    val_loss, val_acc = eval_loop(dataloader=val_loader, model=net, fn_loss=fn_loss, epoch=epoch, writer=writer_val)
+
+    print(f"Epoch {epoch} summary: Train Loss: {loss:.4f} | Train Accuracy: {100*acc:.1f}% | Val Loss: {val_loss:.4f} | Val Accuracy: {100*val_acc:.1f}%")
+    if epoch % 10 == 0:
+        save(ckpt_dir=ckpt_dir, net=net, optim=optim, epoch=epoch)
 
 writer_train.close()
+writer_val.close()
