@@ -16,7 +16,8 @@ data_dir = './datasets'
 log_dir = './log'
 ckpt_dir = './checkpoint'
 
-device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+# device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu" # mac
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"Using {device} device")
 
