@@ -7,7 +7,7 @@ datasets_dir = "./xbd"  # 실제 경로로 수정
 # 대상 폴더 경로 (복사될 폴더의 부모 디렉터리)
 dest_dir = "."  # 현재 디렉터리(또는 원하는 부모 경로)로 지정
 
-def create_dataset_structure(base_path='.'):
+def create_dataset_structure(base_path='.', fname_folder='datasets'):
     """
     주어진 base_path 하위에 datasets 폴더 및
     hold, test, train 폴더와 각각의 images, targets 폴더를 생성합니다.
@@ -19,16 +19,16 @@ def create_dataset_structure(base_path='.'):
     """
     # 생성할 폴더 구조 정의 ("datasets" 접두사가 포함됨)
     folders = [
-        "datasets/hold/images",
-        "datasets/hold/targets",
-        "datasets/test/images",
-        "datasets/test/targets",
-        "datasets/train/images",
-        "datasets/train/targets",
+        "hold/images",
+        "hold/targets",
+        "test/images",
+        "test/targets",
+        "train/images",
+        "train/targets",
     ]
     
     for folder in folders:
-        target_path = os.path.join(base_path, folder)
+        target_path = os.path.join(base_path, fname_folder, folder)
         os.makedirs(target_path, exist_ok=True)
         print(f"Created: {target_path}")
 
